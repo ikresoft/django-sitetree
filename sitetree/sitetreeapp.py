@@ -12,7 +12,7 @@ from django.core.cache import cache
 from django.db.models import signals
 from django.utils import six
 from django.utils.http import urlquote
-from django.utils.translation import get_language
+from django.utils.translation import get_language, activate
 from django.utils.encoding import python_2_unicode_compatible
 from django.template import Context
 from django.template.defaulttags import url as url_tag
@@ -32,8 +32,6 @@ CACHE_TIMEOUT = 31536000
 
 # Holds tree items processor callable or None.
 _ITEMS_PROCESSOR = None
-# Holds aliases of trees that support internationalization.
-_I18N_TREES = []
 # Holds trees dynamically loaded from project apps.
 _DYNAMIC_TREES = {}
 # Dictionary index in `_DYNAMIC_TREES` for orphaned trees list.
@@ -91,34 +89,6 @@ def register_items_hook(callable):
     """
     global _ITEMS_PROCESSOR
     _ITEMS_PROCESSOR = callable
-
-
-def register_i18n_trees(aliases):
-    """Registers aliases of internationalized sitetrees.
-    Internationalized sitetrees are those, which are dubbed by other trees having
-    locale identifying suffixes in their aliases.
-
-    Lets suppose ``my_tree`` is the alias of a generic tree. This tree is the one
-    that we call by its alias in templates, and it is the one which is used
-    if no i18n version of that tree is found.
-
-    Given that ``my_tree_en``, ``my_tree_ru`` and other ``my_tree_{locale-id}``-like
-    trees are considered internationalization sitetrees. These are used (if available)
-    in accordance with current locale used by project.
-
-    Example::
-
-        # Put the following code somewhere where it'd be triggered as expected. E.g. in main urls.py.
-
-        # First import the register function.
-        from sitetree.sitetreeapp import register_i18n_trees
-
-        # At last we register i18n trees.
-        register_i18n_trees(['my_tree', 'my_another_tree'])
-
-    """
-    global _I18N_TREES
-    _I18N_TREES = aliases
 
 
 def register_dynamic_trees(trees, *args, **kwargs):
@@ -309,22 +279,6 @@ class SiteTree(object):
         """Returns current sitetree global context."""
         return cls._global_context
 
-    def resolve_tree_i18n_alias(self, alias):
-        """Resolves internationalized tree alias.
-        Verifies whether a separate sitetree is available for currently active language.
-        If so, returns i18n alias. If not, returns the initial alias.
-        """
-        if alias in _I18N_TREES:
-            current_language_code = get_language().replace('_', '-').split('-')[0]
-            i18n_tree_alias = '%s_%s' % (alias, current_language_code)
-            trees_count = self.get_cache_entry('tree_aliases', i18n_tree_alias)
-            if trees_count is False:
-                trees_count = MODEL_TREE_CLASS.objects.filter(alias=i18n_tree_alias).count()
-                self.set_cache_entry('tree_aliases', i18n_tree_alias, trees_count)
-            if trees_count:
-                alias = i18n_tree_alias
-        return alias
-
     @staticmethod
     def attach_dynamic_tree_items(tree_alias, src_tree_items):
         """Attaches dynamic sitetrees items registered with `register_dynamic_trees()`
@@ -385,9 +339,6 @@ class SiteTree(object):
         """
         self.cache_init()
         sitetree_needs_caching = False
-        if not self.current_app_is_admin():
-            # We do not need i18n for a tree rendered in Admin dropdown.
-            alias = self.resolve_tree_i18n_alias(alias)
         sitetree = self.get_cache_entry('sitetrees', alias)
 
         if not sitetree:
@@ -537,23 +488,27 @@ class SiteTree(object):
         if url_pattern in entry_from_cache:
             resolved_url = entry_from_cache[url_pattern][0]
         else:
-            if sitetree_item.urlaspattern:
-                # Form token to pass to Django 'url' tag.
-                url_token = u'url %s as item.url_resolved' % url_pattern
-                url_tag(
-                    template.Parser(None),
-                    template.Token(token_type=template.TOKEN_BLOCK, contents=url_token)
-                ).render(context)
+            curr_lang = get_language()
+            for lang in settings.LANGUAGES:
+                activate(lang[0])
+                if sitetree_item.urlaspattern:
+                    # Form token to pass to Django 'url' tag.
+                    url_token = u'url %s as item.url_resolved' % url_pattern
+                    url_tag(
+                        template.Parser(None),
+                        template.Token(token_type=template.TOKEN_BLOCK, contents=url_token)
+                    ).render(context)
 
-                # We make an anchor link from an unresolved URL as a reminder.
-                if not context['item.url_resolved']:
-                    resolved_url = UNRESOLVED_ITEM_MARKER
+                    # We make an anchor link from an unresolved URL as a reminder.
+                    if not context['item.url_resolved']:
+                        resolved_url = UNRESOLVED_ITEM_MARKER
+                    else:
+                        resolved_url = context['item.url_resolved']
                 else:
-                    resolved_url = context['item.url_resolved']
-            else:
-                resolved_url = url_pattern
+                    resolved_url = url_pattern
 
-            self.update_cache_entry_value('urls', tree_alias, {url_pattern: (resolved_url, sitetree_item)})
+                self.update_cache_entry_value('urls', tree_alias, {'%s:%s' % (lang[0], url_pattern): (resolved_url, sitetree_item)})
+                activate(curr_lang)
 
         return resolved_url
 
@@ -732,9 +687,6 @@ class SiteTree(object):
         return my_template.render(context)
 
     def get_children(self, tree_alias, item):
-        if not self.current_app_is_admin():
-            # We do not need i18n for a tree rendered in Admin dropdown.
-            tree_alias = self.resolve_tree_i18n_alias(tree_alias)
         return self.get_cache_entry('parents', tree_alias)[item]
 
     def update_has_children(self, tree_alias, tree_items, navigation_type):

@@ -11,7 +11,7 @@ from django.conf.urls import patterns, url
 from .settings import MODEL_TREE, MODEL_TREE_ITEM
 from .fields import TreeItemChoiceField
 from .utils import get_tree_model, get_tree_item_model, get_app_n_model
-
+from modeltranslation.admin import TranslationAdmin
 
 SMUGGLER_INSTALLED = 'smuggler' in django_settings.INSTALLED_APPS
 
@@ -79,7 +79,7 @@ def override_item_admin(admin_class):
     _reregister_tree_admin()
 
 
-class TreeItemAdmin(admin.ModelAdmin):
+class TreeItemAdmin(TranslationAdmin):
 
     exclude = ('tree', 'sort_order')
     fieldsets = (

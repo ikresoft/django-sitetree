@@ -489,26 +489,23 @@ class SiteTree(object):
             resolved_url = entry_from_cache[url_pattern][0]
         else:
             curr_lang = get_language()
-            for lang in settings.LANGUAGES:
-                activate(lang[0])
-                if sitetree_item.urlaspattern:
-                    # Form token to pass to Django 'url' tag.
-                    url_token = u'url %s as item.url_resolved' % url_pattern
-                    url_tag(
-                        template.Parser(None),
-                        template.Token(token_type=template.TOKEN_BLOCK, contents=url_token)
-                    ).render(context)
+            if sitetree_item.urlaspattern:
+                # Form token to pass to Django 'url' tag.
+                url_token = u'url %s as item.url_resolved' % url_pattern
+                url_tag(
+                    template.Parser(None),
+                    template.Token(token_type=template.TOKEN_BLOCK, contents=url_token)
+                ).render(context)
 
-                    # We make an anchor link from an unresolved URL as a reminder.
-                    if not context['item.url_resolved']:
-                        resolved_url = UNRESOLVED_ITEM_MARKER
-                    else:
-                        resolved_url = context['item.url_resolved']
+                # We make an anchor link from an unresolved URL as a reminder.
+                if not context['item.url_resolved']:
+                    resolved_url = UNRESOLVED_ITEM_MARKER
                 else:
-                    resolved_url = url_pattern
+                    resolved_url = context['item.url_resolved']
+            else:
+                resolved_url = url_pattern
 
-                self.update_cache_entry_value('urls', tree_alias, {'%s:%s' % (lang[0], url_pattern): (resolved_url, sitetree_item)})
-                activate(curr_lang)
+            self.update_cache_entry_value('urls', tree_alias, {'%s:%s' % (curr_lang, url_pattern): (resolved_url, sitetree_item)})
 
         return resolved_url
 

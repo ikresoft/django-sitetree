@@ -8,10 +8,9 @@ from django.contrib.admin.sites import NotRegistered
 from django.contrib import messages
 from django.conf.urls import patterns, url
 
-from .settings import MODEL_TREE, MODEL_TREE_ITEM
+from .settings import MODEL_TREE, MODEL_TREE_ITEM, USE_TRANSLATION
 from .fields import TreeItemChoiceField
 from .utils import get_tree_model, get_tree_item_model, get_app_n_model
-from modeltranslation.admin import TranslationAdmin
 
 SMUGGLER_INSTALLED = 'smuggler' in django_settings.INSTALLED_APPS
 
@@ -79,7 +78,21 @@ def override_item_admin(admin_class):
     _reregister_tree_admin()
 
 
-class TreeItemAdmin(TranslationAdmin):
+class AdminModel(admin.ModelAdmin):
+    pass
+
+if USE_TRANSLATION:
+    from modeltranslation.admin import TranslationAdmin
+
+    class AdminModel(TranslationAdmin):
+
+        def formfield_for_dbfield(self, db_field, **kwargs):
+            field = super(AdminModel, self).formfield_for_dbfield(db_field, **kwargs)
+            self.patch_translation_field(db_field, field, **kwargs)
+            return field
+
+
+class TreeItemAdmin(AdminModel):
 
     exclude = ('tree', 'sort_order')
     fieldsets = (

@@ -11,6 +11,7 @@ from django.conf.urls import patterns, url
 from .settings import MODEL_TREE, MODEL_TREE_ITEM, USE_TRANSLATION
 from .fields import TreeItemChoiceField
 from .utils import get_tree_model, get_tree_item_model, get_app_n_model
+from forms import *
 
 SMUGGLER_INSTALLED = 'smuggler' in django_settings.INSTALLED_APPS
 
@@ -93,7 +94,7 @@ if USE_TRANSLATION:
 
 
 class TreeItemAdmin(AdminModel):
-
+    form = TreeItemAdminForm
     exclude = ('tree', 'sort_order')
     fieldsets = (
         (_('Basic settings'), {

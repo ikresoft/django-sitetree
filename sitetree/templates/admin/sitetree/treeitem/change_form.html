@@ -9,7 +9,6 @@
                 original_dismissRelatedLookupPopup = window.dismissRelatedLookupPopup;
                 window.dismissRelatedLookupPopup = function () {
                     // put your own code here ...
-                    // AAAAA
                     $("#id_urlaspattern").prop("checked", true);
                     original_dismissRelatedLookupPopup.apply(this, arguments);
                 };

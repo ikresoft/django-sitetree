@@ -29,7 +29,7 @@ class CharFieldNullable(models.CharField):
 @python_2_unicode_compatible
 class TreeBase(models.Model):
 
-    title = models.CharField(_('Title'), max_length=200, help_text=_('Site tree title for presentational purposes.'), blank=True)
+    title = models.CharField(_('Title'), max_length=100, help_text=_('Site tree title for presentational purposes.'), blank=True)
     alias = models.CharField(_('Alias'), max_length=80, help_text=_('Short name to address site tree from templates.<br /><b>Note:</b> change with care.'), unique=True, db_index=True)
 
     class Meta:
@@ -55,7 +55,7 @@ class TreeItemBase(models.Model):
         (PERM_TYPE_ALL, _('All'))
     )
 
-    title = models.CharField(_('Title'), max_length=100, help_text=_('Site tree item title. Can contain template variables E.g.: {{ mytitle }}.'))
+    title = models.CharField(_('Title'), max_length=200, help_text=_('Site tree item title. Can contain template variables E.g.: {{ mytitle }}.'))
     hint = models.CharField(_('Hint'), max_length=200, help_text=_('Some additional information about this item that is used as a hint.'), blank=True, default='')
     url = models.CharField(_('URL'), max_length=200, help_text=_('Exact URL or URL pattern (see "Additional settings") for this item.'), db_index=True)
     urlaspattern = models.BooleanField(_('URL as Pattern'), help_text=_('Whether the given URL should be treated as a pattern.<br /><b>Note:</b> Refer to Django "URL dispatcher" documentation (e.g. "Naming URL patterns" part).'), db_index=True, default=False)

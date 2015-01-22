@@ -12,9 +12,9 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AlterField(
-            model_name='tree',
+            model_name='treeitem',
             name='title',
-            field=models.CharField(help_text='Site tree title for presentational purposes.', max_length=200, verbose_name='Title', blank=True),
+            field=models.CharField(help_text='Site tree item title. Can contain template variables E.g.: {{ mytitle }}.', max_length=200, verbose_name='Title'),
             preserve_default=True,
         ),
     ]
